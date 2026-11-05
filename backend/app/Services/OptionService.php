@@ -30,12 +30,12 @@ class OptionService
             ->get(['id', 'name', 'username']);
     }
 
-    public function years(): Collection
+    public function years(): array
     {
         return BarangMasuk::query()
-            ->selectRaw('EXTRACT(YEAR FROM tanggal)::int AS year')
-            ->distinct()
+            ->selectRaw('DISTINCT EXTRACT(YEAR FROM tanggal)::int AS year')
             ->orderByDesc('year')
-            ->pluck('year');
+            ->pluck('year')
+            ->all();
     }
 }

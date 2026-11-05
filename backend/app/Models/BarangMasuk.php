@@ -27,7 +27,7 @@ class BarangMasuk extends Model
     protected function lampiranUrl(): Attribute
     {
         return Attribute::get(
-            fn() => $this->lampiran ? Storage::disk('public')->url($this->lampiran) : null
+            fn() => $this->lampiran ? '/storage/' . $this->lampiran : null
         );
     }
 }
