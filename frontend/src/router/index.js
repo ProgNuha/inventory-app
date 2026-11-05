@@ -13,8 +13,6 @@ const router = createRouter({
       children: [
         { path: '', redirect: '/barang-masuk' },
         { path: 'barang-masuk', component: () => import('../views/BarangMasukView.vue'), meta: { title: 'Barang Masuk' } },
-        { path: 'barang-masuk/create', component: () => import('../views/BarangMasukFormView.vue'), meta: { title: 'Tambah Barang Masuk' } },
-        { path: 'barang-masuk/:id/edit', component: () => import('../views/BarangMasukFormView.vue'), meta: { title: 'Edit Barang Masuk' } },
         { path: 'master/kategori', component: () => import('../views/CategoryView.vue'), meta: { title: 'Kategori', admin: true } },
         { path: 'master/sub-kategori', component: () => import('../views/SubCategoryView.vue'), meta: { title: 'Sub Kategori', admin: true } },
         { path: 'users', component: () => import('../views/UserView.vue'), meta: { title: 'Manajemen User', admin: true } },

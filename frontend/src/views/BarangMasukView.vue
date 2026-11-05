@@ -4,6 +4,8 @@ import http from '../api/http'
 import { useAuthStore } from '../stores/auth'
 import { rupiah, formatDateTime, itemCode, downloadBlob } from '../utils/format'
 import Pagination from '../components/Pagination.vue'
+import IconButton from '../components/IconButton.vue'
+import BarangMasukFormModal from '../components/BarangMasukFormModal.vue'
 
 const auth = useAuthStore()
 
@@ -17,6 +19,9 @@ const sort = reactive({ by: 'tanggal', dir: 'desc' })
 const categories = ref([])
 const subCategories = ref([])
 const years = ref([])
+
+const formOpen = ref(false)
+const editId = ref(null)
 
 function params(page) {
   return {
@@ -50,18 +55,22 @@ async function loadSubCategories(categoryId) {
   subCategories.value = data
 }
 
-onMounted(async () => {
+function loadYears() {
+  http.get('/options/years')
+    .then(({ data }) => {
+      const list = data.map((y) => (typeof y === 'object' ? Object.values(y)[0] : y))
+      years.value = [...new Set([new Date().getFullYear(), ...list])].sort((a, b) => b - a)
+    })
+    .catch(() => { years.value = [new Date().getFullYear()] })
+}
+
+onMounted(() => {
   load()
   http.get('/options/categories').then(({ data }) => (categories.value = data))
-  http.get('/options/years').then(({ data }) => {
-    const list = data.map((y) => (typeof y === 'object' ? Object.values(y)[0] : y))
-    const current = new Date().getFullYear()
-    years.value = [...new Set([current, ...list])].sort((a, b) => b - a)
-  })
+  loadYears()
   loadSubCategories('')
 })
 
-// ganti kategori: sub kategori ikut berubah dan pilihan sebelumnya direset
 watch(() => filters.category_id, (id) => {
   filters.sub_category_id = ''
   loadSubCategories(id)
@@ -80,6 +89,16 @@ function toggleSort(col) {
 }
 const arrow = (col) => (sort.by === col ? (sort.dir === 'asc' ? '▲' : '▼') : '')
 
+function openForm(id = null) {
+  editId.value = id
+  formOpen.value = true
+}
+function onSaved() {
+  formOpen.value = false
+  load(meta.page)
+  loadYears()
+}
+
 async function exportExcel() {
   try {
     const { data } = await http.get('/barang-masuk/export', { params: params(undefined), responseType: 'blob' })
@@ -90,7 +109,7 @@ async function exportExcel() {
 }
 
 async function printSurat(row) {
-  const win = window.open('', '_blank') // dibuka dulu agar tidak diblokir popup blocker
+  const win = window.open('', '_blank')
   try {
     const { data } = await http.get(`/barang-masuk/${row.id}/print`, { responseType: 'blob' })
     win.location = URL.createObjectURL(new Blob([data], { type: 'application/pdf' }))
@@ -124,7 +143,7 @@ async function remove(row) {
 <template>
   <div class="rounded bg-white shadow-sm">
     <div class="flex flex-wrap items-center justify-between gap-2 p-3">
-      <RouterLink to="/barang-masuk/create" class="btn-primary inline-block">+ Tambah Data</RouterLink>
+      <button class="btn-primary" @click="openForm(null)">+ Tambah Data</button>
 
       <div class="flex flex-wrap items-center gap-2">
         <select v-model="filters.category_id" class="input !w-44">
@@ -148,12 +167,12 @@ async function remove(row) {
       <table class="w-full min-w-[1100px] text-sm">
         <thead class="bg-slate-50 text-[11px] uppercase text-slate-500">
           <tr>
-            <th class="px-3 py-2 text-left w-10">No</th>
+            <th class="w-10 px-3 py-2 text-left">No</th>
             <th class="px-3 py-2 text-left">Action</th>
-            <th class="px-3 py-2 text-left cursor-pointer select-none" @click="toggleSort('tanggal')">
+            <th class="cursor-pointer select-none px-3 py-2 text-left" @click="toggleSort('tanggal')">
               Tanggal {{ arrow('tanggal') }}
             </th>
-            <th class="px-3 py-2 text-left cursor-pointer select-none" @click="toggleSort('asal_barang')">
+            <th class="cursor-pointer select-none px-3 py-2 text-left" @click="toggleSort('asal_barang')">
               Asal Barang {{ arrow('asal_barang') }}
             </th>
             <th class="px-3 py-2 text-left">Penerima</th>
@@ -162,7 +181,7 @@ async function remove(row) {
             <th class="px-3 py-2 text-left">Nama</th>
             <th class="px-3 py-2 text-right">Harga (Rp.)</th>
             <th class="px-3 py-2 text-right">Jumlah</th>
-            <th class="px-3 py-2 text-right cursor-pointer select-none" @click="toggleSort('total_harga')">
+            <th class="cursor-pointer select-none px-3 py-2 text-right" @click="toggleSort('total_harga')">
               Total (Rp.) {{ arrow('total_harga') }}
             </th>
             <th class="px-3 py-2 text-center">Status</th>
@@ -178,12 +197,12 @@ async function remove(row) {
             >
               <template v-if="idx === 0">
                 <td :rowspan="row.items.length" class="px-3 py-2 align-top">{{ meta.from + ri }}</td>
-                <td :rowspan="row.items.length" class="px-3 py-2 align-top whitespace-nowrap space-x-2 text-xs">
-                  <RouterLink :to="`/barang-masuk/${row.id}/edit`" class="text-primary hover:underline">Edit</RouterLink>
-                  <button class="text-slate-600 hover:underline" @click="printSurat(row)">Cetak</button>
-                  <button class="text-red-600 hover:underline" @click="remove(row)">Hapus</button>
+                <td :rowspan="row.items.length" class="whitespace-nowrap px-2 py-2 align-top">
+                  <IconButton icon="edit" title="Edit" color="text-primary hover:bg-slate-100" @click="openForm(row.id)" />
+                  <IconButton icon="print" title="Cetak surat masuk" @click="printSurat(row)" />
+                  <IconButton icon="trash" title="Hapus" color="text-red-600 hover:bg-red-50" @click="remove(row)" />
                 </td>
-                <td :rowspan="row.items.length" class="px-3 py-2 align-top whitespace-nowrap">{{ formatDateTime(row.tanggal) }}</td>
+                <td :rowspan="row.items.length" class="whitespace-nowrap px-3 py-2 align-top">{{ formatDateTime(row.tanggal) }}</td>
                 <td :rowspan="row.items.length" class="px-3 py-2 align-top">{{ row.asal_barang }}</td>
                 <td :rowspan="row.items.length" class="px-3 py-2 align-top">{{ row.user?.name }}</td>
                 <td :rowspan="row.items.length" class="px-3 py-2 align-top">{{ row.sub_category?.nama }}</td>
@@ -192,7 +211,7 @@ async function remove(row) {
               <td class="px-3 py-2">{{ itemCode(row, item) }}</td>
               <td class="px-3 py-2">{{ item.nama_barang }}</td>
               <td class="px-3 py-2 text-right">{{ rupiah(item.harga) }}</td>
-              <td class="px-3 py-2 text-right whitespace-nowrap">{{ item.jumlah }} {{ item.satuan }}</td>
+              <td class="whitespace-nowrap px-3 py-2 text-right">{{ item.jumlah }} {{ item.satuan }}</td>
               <td class="px-3 py-2 text-right">{{ rupiah(item.total) }}</td>
 
               <td v-if="idx === 0" :rowspan="row.items.length" class="px-3 py-2 text-center align-top">
@@ -225,5 +244,7 @@ async function remove(row) {
     <div class="p-3">
       <Pagination :page="meta.page" :last-page="meta.lastPage" @change="load" />
     </div>
+
+    <BarangMasukFormModal :show="formOpen" :edit-id="editId" @close="formOpen = false" @saved="onSaved" />
   </div>
 </template>
