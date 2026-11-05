@@ -21,6 +21,18 @@ Tes teknis Fullstack Programmer JMC Indonesia: aplikasi untuk mengelola data **B
 
 Arsitektur backend: validasi pada **FormRequest**, logika bisnis pada **Service**, **Controller** hanya menangani HTTP request dan response, serta otorisasi melalui **Policy**.
 
+## Spesifikasi Server Deployment
+
+Aplikasi di-deploy menggunakan layanan **free tier** dengan sumber daya terbatas, sehingga respons dapat terasa lebih lambat dibandingkan saat dijalankan secara lokal.
+
+| Komponen | Layanan | Spesifikasi |
+|---|---|---|
+| Aplikasi (backend + frontend) | Render Web Service, plan Free (Docker) | 512 MB RAM, 0,1 vCPU, tanpa disk permanen. Layanan tidur setelah ±15 menit tanpa akses |
+| Database | Supabase PostgreSQL, plan Free (Session pooler, port 5432) | Shared CPU, ±500 MB RAM, kapasitas database 500 MB |
+| Web server | PHP built-in server (`php artisan serve`), 4 worker | Dijalankan di dalam container Docker |
+
+Untuk performa yang lebih baik, aplikasi dapat dijalankan secara lokal menggunakan Docker (lihat bagian Instalasi Lokal).
+
 ## Akun Pengujian
 
 | Role | Username | Password |
