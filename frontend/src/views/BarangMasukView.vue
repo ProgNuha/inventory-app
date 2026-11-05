@@ -21,6 +21,7 @@ const subCategories = ref([])
 const years = ref([])
 
 const formOpen = ref(false)
+const cell = 'border border-slate-200 px-3 py-2'
 const editId = ref(null)
 
 function params(page) {
@@ -142,6 +143,7 @@ async function remove(row) {
 
 <template>
   <div class="rounded bg-white shadow-sm">
+    <!-- toolbar -->
     <div class="flex flex-wrap items-center justify-between gap-2 p-3">
       <button class="btn-primary" @click="openForm(null)">+ Tambah Data</button>
 
@@ -158,74 +160,87 @@ async function remove(row) {
           <option value="">Semua Tahun</option>
           <option v-for="y in years" :key="y" :value="y">{{ y }}</option>
         </select>
-        <input v-model="filters.search" class="input !w-52" placeholder="Cari asal barang / sub kategori" />
+
+        <div class="flex">
+          <input v-model="filters.search" class="input !w-44 !rounded-r-none" placeholder="Cari data.." />
+          <button
+            type="button"
+            title="Cari"
+            class="grid w-10 place-items-center rounded-r border border-l-0 border-slate-300 text-slate-500 hover:bg-slate-50"
+            @click="load(1)"
+          >
+            <svg viewBox="0 0 24 24" class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+              <circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" />
+            </svg>
+          </button>
+        </div>
+
         <button class="btn-secondary" @click="exportExcel">Export Excel</button>
       </div>
     </div>
 
+    <!-- tabel -->
     <div class="overflow-x-auto">
-      <table class="w-full min-w-[1100px] text-sm">
-        <thead class="bg-slate-50 text-[11px] uppercase text-slate-500">
-          <tr>
-            <th class="w-10 px-3 py-2 text-left">No</th>
-            <th class="px-3 py-2 text-left">Action</th>
-            <th class="cursor-pointer select-none px-3 py-2 text-left" @click="toggleSort('tanggal')">
+      <table class="w-full min-w-[1100px] border-collapse text-xs">
+        <thead>
+          <tr class="text-[11px] font-bold uppercase text-slate-700">
+            <th :class="[cell, 'w-10 text-left']">No</th>
+            <th :class="[cell, 'text-left']">Action</th>
+            <th :class="[cell, 'cursor-pointer select-none text-left']" @click="toggleSort('tanggal')">
               Tanggal {{ arrow('tanggal') }}
             </th>
-            <th class="cursor-pointer select-none px-3 py-2 text-left" @click="toggleSort('asal_barang')">
+            <th :class="[cell, 'cursor-pointer select-none text-left']" @click="toggleSort('asal_barang')">
               Asal Barang {{ arrow('asal_barang') }}
             </th>
-            <th class="px-3 py-2 text-left">Penerima</th>
-            <th class="px-3 py-2 text-left">Unit</th>
-            <th class="px-3 py-2 text-left">Kode</th>
-            <th class="px-3 py-2 text-left">Nama</th>
-            <th class="px-3 py-2 text-right">Harga (Rp.)</th>
-            <th class="px-3 py-2 text-right">Jumlah</th>
-            <th class="cursor-pointer select-none px-3 py-2 text-right" @click="toggleSort('total_harga')">
+            <th :class="[cell, 'text-left']">Penerima</th>
+            <th :class="[cell, 'text-left']">Unit</th>
+            <th :class="[cell, 'text-left']">Kode</th>
+            <th :class="[cell, 'text-left']">Nama</th>
+            <th :class="[cell, 'text-right']">Harga (Rp.)</th>
+            <th :class="[cell, 'text-right']">Jumlah</th>
+            <th :class="[cell, 'cursor-pointer select-none text-right']" @click="toggleSort('total_harga')">
               Total (Rp.) {{ arrow('total_harga') }}
             </th>
-            <th class="px-3 py-2 text-center">Status</th>
+            <th :class="[cell, 'text-center']">Status</th>
           </tr>
         </thead>
 
         <tbody v-if="rows.length">
           <template v-for="(row, ri) in rows" :key="row.id">
-            <tr
-              v-for="(item, idx) in row.items"
-              :key="item.id"
-              :class="[idx === 0 ? 'border-t' : '', ri % 2 ? 'bg-slate-50/60' : '']"
-            >
+            <tr v-for="(item, idx) in row.items" :key="item.id">
               <template v-if="idx === 0">
-                <td :rowspan="row.items.length" class="px-3 py-2 align-top">{{ meta.from + ri }}</td>
-                <td :rowspan="row.items.length" class="whitespace-nowrap px-2 py-2 align-top">
-                  <IconButton icon="edit" title="Edit" color="text-primary hover:bg-slate-100" @click="openForm(row.id)" />
+                <td :rowspan="row.items.length" :class="[cell, 'align-top']">{{ meta.from + ri }}</td>
+                <td :rowspan="row.items.length" :class="[cell, 'whitespace-nowrap !px-1 align-top']">
+                  <IconButton icon="edit" title="Edit" @click="openForm(row.id)" />
                   <IconButton icon="print" title="Cetak surat masuk" @click="printSurat(row)" />
-                  <IconButton icon="trash" title="Hapus" color="text-red-600 hover:bg-red-50" @click="remove(row)" />
+                  <IconButton icon="trash" title="Hapus" color="text-red-500 hover:bg-red-50" @click="remove(row)" />
                 </td>
-                <td :rowspan="row.items.length" class="whitespace-nowrap px-3 py-2 align-top">{{ formatDateTime(row.tanggal) }}</td>
-                <td :rowspan="row.items.length" class="px-3 py-2 align-top">{{ row.asal_barang }}</td>
-                <td :rowspan="row.items.length" class="px-3 py-2 align-top">{{ row.user?.name }}</td>
-                <td :rowspan="row.items.length" class="px-3 py-2 align-top">{{ row.sub_category?.nama }}</td>
+                <td :rowspan="row.items.length" :class="[cell, 'whitespace-nowrap align-top']">{{ formatDateTime(row.tanggal) }}</td>
+                <td :rowspan="row.items.length" :class="[cell, 'align-top']">{{ row.asal_barang }}</td>
+                <td :rowspan="row.items.length" :class="[cell, 'align-top']">{{ row.user?.name }}</td>
+                <td :rowspan="row.items.length" :class="[cell, 'align-top']">{{ row.sub_category?.nama }}</td>
               </template>
 
-              <td class="px-3 py-2">{{ itemCode(row, item) }}</td>
-              <td class="px-3 py-2">{{ item.nama_barang }}</td>
-              <td class="px-3 py-2 text-right">{{ rupiah(item.harga) }}</td>
-              <td class="whitespace-nowrap px-3 py-2 text-right">{{ item.jumlah }} {{ item.satuan }}</td>
-              <td class="px-3 py-2 text-right">{{ rupiah(item.total) }}</td>
+              <!-- baris item: selang-seling putih / abu-abu -->
+              <td :class="[cell, idx % 2 ? 'bg-slate-100' : '']">{{ itemCode(row, item) }}</td>
+              <td :class="[cell, idx % 2 ? 'bg-slate-100' : '']">{{ item.nama_barang }}</td>
+              <td :class="[cell, 'text-right', idx % 2 ? 'bg-slate-100' : '']">{{ rupiah(item.harga) }}</td>
+              <td :class="[cell, 'whitespace-nowrap text-right', idx % 2 ? 'bg-slate-100' : '']">{{ item.jumlah }} {{ item.satuan }}</td>
+              <td :class="[cell, 'text-right', idx % 2 ? 'bg-slate-100' : '']">{{ rupiah(item.total) }}</td>
 
-              <td v-if="idx === 0" :rowspan="row.items.length" class="px-3 py-2 text-center align-top">
+              <td v-if="idx === 0" :rowspan="row.items.length" :class="[cell, 'text-center align-top']">
                 <button
+                  type="button"
                   :disabled="!auth.isAdmin"
-                  :title="auth.isAdmin ? 'Klik untuk mengubah status verifikasi' : 'Hanya admin yang dapat memverifikasi'"
-                  :class="[
-                    'inline-grid h-6 w-6 place-items-center rounded-full border text-sm',
-                    row.is_verified ? 'border-green-500 bg-green-50 text-green-600' : 'border-slate-300 text-slate-300',
-                    auth.isAdmin ? 'cursor-pointer' : 'cursor-default',
-                  ]"
+                  :title="auth.isAdmin ? 'Klik untuk mengubah status verifikasi' : row.is_verified ? 'Terverifikasi' : 'Belum diverifikasi'"
+                  :class="[row.is_verified ? 'text-green-500' : 'text-slate-400', auth.isAdmin ? 'cursor-pointer' : 'cursor-default']"
                   @click="toggleVerify(row)"
                 >
-                  ✓
+                  <svg viewBox="0 0 24 24" class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="12" cy="12" r="10" />
+                    <polyline v-if="row.is_verified" points="8 12.5 11 15.5 16 9" />
+                    <line v-else x1="8" y1="12" x2="16" y2="12" />
+                  </svg>
                 </button>
               </td>
             </tr>
@@ -233,7 +248,7 @@ async function remove(row) {
         </tbody>
         <tbody v-else>
           <tr>
-            <td colspan="12" class="px-3 py-10 text-center text-slate-400">
+            <td colspan="12" :class="[cell, 'py-10 text-center text-slate-400']">
               {{ loading ? 'Memuat data...' : 'Tidak ada data' }}
             </td>
           </tr>
@@ -241,7 +256,7 @@ async function remove(row) {
       </table>
     </div>
 
-    <div class="p-3">
+    <div class="border-t bg-slate-50 p-3">
       <Pagination :page="meta.page" :last-page="meta.lastPage" @change="load" />
     </div>
 
