@@ -2,10 +2,19 @@
 
 use App\Http\Controllers\AuthController;
 use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\{CategoryController, SubCategoryController, OptionController};
 
 Route::post('/login', [AuthController::class, 'login']);
 
 Route::middleware('auth:sanctum')->group(function () {
     Route::get('/me', [AuthController::class, 'me']);
     Route::post('/logout', [AuthController::class, 'logout']);
+    Route::get('/options/categories', [OptionController::class, 'categories']);
+    Route::get('/options/sub-categories', [OptionController::class, 'subCategories']);
+});
+
+Route::middleware(['auth:sanctum', 'role:admin'])->group(function () {
+    Route::get('/options/operators', [OptionController::class, 'operators']);
+    Route::apiResource('categories', CategoryController::class)->except('show');
+    Route::apiResource('sub-categories', SubCategoryController::class)->except('show');
 });
