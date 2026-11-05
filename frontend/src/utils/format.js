@@ -1,0 +1,1 @@
+export const rupiah = (n) => Number(n ?? 0).toLocaleString('id-ID')
