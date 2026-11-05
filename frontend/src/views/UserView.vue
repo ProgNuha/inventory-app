@@ -3,7 +3,9 @@ import { ref, reactive, watch, onMounted } from 'vue'
 import http from '../api/http'
 import { useAuthStore } from '../stores/auth'
 import Pagination from '../components/Pagination.vue'
+import LoadingOverlay from '../components/LoadingOverlay.vue'
 import ModalDialog from '../components/ModalDialog.vue'
+import SearchSelect from '../components/SearchSelect.vue'
 import IconButton from '../components/IconButton.vue'
 
 const auth = useAuthStore()
@@ -13,6 +15,10 @@ const meta = reactive({ page: 1, lastPage: 1, from: 0 })
 const search = ref('')
 const role = ref('')
 const loading = ref(true)
+const roleOptions = [
+  { value: 'admin', label: 'Admin' },
+  { value: 'operator', label: 'Operator' },
+]
 
 async function load(page = 1) {
   loading.value = true
@@ -31,6 +37,7 @@ async function load(page = 1) {
 
 let timer
 watch([search, role], () => {
+  loading.value = true
   clearTimeout(timer)
   timer = setTimeout(() => load(1), 300)
 })
@@ -106,15 +113,13 @@ async function remove(row) {
     <div class="flex flex-wrap items-center justify-between gap-2 p-3">
       <button class="btn-primary" @click="openForm()">+ Tambah Data</button>
       <div class="flex gap-2">
-        <select v-model="role" class="input !w-36">
-          <option value="">Semua Role</option>
-          <option value="admin">Admin</option>
-          <option value="operator">Operator</option>
-        </select>
+        <SearchSelect v-model="role" :options="roleOptions" label-key="label" value-key="value" empty-label="Semua Role" class="!w-36" />
         <input v-model="search" class="input !w-56" placeholder="Cari username / nama..." />
       </div>
     </div>
 
+    <div class="relative">
+      <LoadingOverlay :show="loading && rows.length > 0" />
     <div class="overflow-x-auto transition-opacity" :class="{ 'pointer-events-none opacity-50': loading && rows.length }">
       <table class="data-table">
         <thead>
@@ -152,6 +157,7 @@ async function remove(row) {
           </tr>
         </tbody>
       </table>
+    </div>
     </div>
 
     <div class="border-t bg-slate-50 p-3">

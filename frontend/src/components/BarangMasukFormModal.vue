@@ -1,9 +1,10 @@
 <script setup>
-import { ref, reactive, computed, watch, onMounted } from 'vue'
+import { ref, reactive, computed, watch, nextTick, onMounted } from 'vue'
 import http from '../api/http'
 import { useAuthStore } from '../stores/auth'
 import { rupiah } from '../utils/format'
 import RupiahInput from './RupiahInput.vue'
+import SearchSelect from './SearchSelect.vue'
 
 const props = defineProps({
   show: Boolean,
@@ -15,6 +16,8 @@ const auth = useAuthStore()
 const operators = ref([])
 const categories = ref([])
 const subCategories = ref([])
+const loadingSub = ref(false)
+let subRequest = 0
 
 const form = reactive({ user_id: '', category_id: '', sub_category_id: '', asal_barang: '', nomor_surat: '' })
 const items = ref([newItem()])
@@ -25,7 +28,16 @@ const fileKey = ref(0)
 const errors = ref({})
 const message = ref('')
 const saving = ref(false)
+const banner = ref(null)
 const loadingDetail = ref(false)
+
+// terkunci bila belum pilih kategori, sedang memuat, atau kategori tidak punya sub kategori
+const subDisabled = computed(() => !form.category_id || loadingSub.value || !subCategories.value.length)
+const subPlaceholder = computed(() => {
+  if (loadingSub.value) return 'Memuat...'
+  if (form.category_id && !subCategories.value.length) return 'Tidak ada sub kategori'
+  return 'Pilih sub kategori'
+})
 
 const isEdit = computed(() => props.editId !== null)
 
@@ -40,12 +52,20 @@ const grandTotal = computed(() => items.value.reduce((sum, it) => sum + lineTota
 const overLimit = computed(() => !!selectedSub.value && grandTotal.value > batasHarga.value)
 
 async function loadSubCategories(categoryId) {
+  const request = ++subRequest // abaikan respons lama bila kategori keburu diganti
   if (!categoryId) {
     subCategories.value = []
+    loadingSub.value = false
     return
   }
-  const { data } = await http.get('/options/sub-categories', { params: { category_id: categoryId } })
-  subCategories.value = data
+  subCategories.value = [] // buang daftar kategori sebelumnya agar tidak sempat tampil
+  loadingSub.value = true
+  try {
+    const { data } = await http.get('/options/sub-categories', { params: { category_id: categoryId } })
+    if (request === subRequest) subCategories.value = data
+  } finally {
+    if (request === subRequest) loadingSub.value = false
+  }
 }
 
 // dipanggil hanya saat user mengganti kategori (bukan saat prefill edit)
@@ -62,6 +82,8 @@ function resetForm() {
   form.nomor_surat = ''
   items.value = [newItem()]
   subCategories.value = []
+  loadingSub.value = false
+  subRequest++
   lampiran.value = null
   existingLampiran.value = null
   fileKey.value++
@@ -112,13 +134,34 @@ const removeItem = (i) => { if (items.value.length > 1) items.value.splice(i, 1)
 const onFile = (e) => (lampiran.value = e.target.files[0] ?? null)
 const err = (key) => errors.value[key]?.[0]
 
+// tampilkan pesan error di banner atas dan gulung ke sana (form panjang, banner bisa di luar layar)
+async function showMessage(text) {
+  message.value = text
+  await nextTick()
+  banner.value?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+}
+
+function validateSelects() {
+  const e = {}
+  if (auth.isAdmin && !form.user_id) e.user_id = ['Operator wajib dipilih']
+  if (!form.category_id) e.category_id = ['Kategori wajib dipilih']
+  else if (!subCategories.value.length) e.sub_category_id = ['Kategori ini belum memiliki sub kategori, pilih kategori lain']
+  else if (!form.sub_category_id) e.sub_category_id = ['Sub kategori wajib dipilih']
+  return e
+}
+
 async function submit() {
   errors.value = {}
   message.value = ''
 
+  const invalid = validateSelects()
+  if (Object.keys(invalid).length) {
+    errors.value = invalid
+    return showMessage(Object.values(invalid)[0][0])
+  }
+
   if (overLimit.value) {
-    message.value = `Total harga (Rp ${rupiah(grandTotal.value)}) melebihi batas harga sub kategori (Rp ${rupiah(batasHarga.value)})`
-    return
+    return showMessage(`Total harga (Rp ${rupiah(grandTotal.value)}) melebihi batas harga sub kategori (Rp ${rupiah(batasHarga.value)})`)
   }
 
   const fd = new FormData()
@@ -147,9 +190,9 @@ async function submit() {
   } catch (e) {
     if (e.response?.status === 422) {
       errors.value = e.response.data.errors ?? {}
-      message.value = e.response.data.message ?? 'Data tidak valid'
+      showMessage(e.response.data.message ?? 'Data tidak valid')
     } else {
-      message.value = e.response?.data?.message || 'Gagal menyimpan data'
+      showMessage(e.response?.data?.message || 'Gagal menyimpan data')
     }
   } finally {
     saving.value = false
@@ -160,7 +203,7 @@ async function submit() {
 <template>
   <div v-if="show" class="fixed inset-0 z-50 overflow-y-auto bg-black/40 p-4">
     <form class="mx-auto my-6 max-w-5xl rounded bg-white shadow-xl" @submit.prevent="submit">
-      <div v-if="message" class="mx-5 mt-4 rounded border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+      <div v-if="message" ref="banner" class="mx-5 mt-4 rounded border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
         {{ message }}
       </div>
       <p v-if="loadingDetail" class="py-16 text-center text-slate-400">Memuat data...</p>
@@ -172,29 +215,21 @@ async function submit() {
         <div class="space-y-4 px-5 py-4">
           <div>
             <label class="label">Operator</label>
-            <select v-if="auth.isAdmin" v-model="form.user_id" class="input !w-64" required>
-              <option value="" disabled>Pilih operator</option>
-              <option v-for="o in operators" :key="o.id" :value="o.id">{{ o.name }}</option>
-            </select>
+            <SearchSelect v-if="auth.isAdmin" v-model="form.user_id" :options="operators" label-key="name" placeholder="Pilih operator" class="!w-64" />
             <input v-else :value="auth.user?.name" class="input !w-64 bg-slate-100" disabled />
             <p v-if="err('user_id')" class="mt-1 text-xs text-red-600">{{ err('user_id') }}</p>
           </div>
 
           <div>
             <label class="label">Kategori</label>
-            <select v-model="form.category_id" class="input !w-64" required @change="onCategoryChange">
-              <option value="" disabled>Pilih kategori</option>
-              <option v-for="c in categories" :key="c.id" :value="c.id">{{ c.nama }}</option>
-            </select>
+            <SearchSelect v-model="form.category_id" :options="categories" placeholder="Pilih kategori" class="!w-64" @change="onCategoryChange" />
+            <p v-if="err('category_id')" class="mt-1 text-xs text-red-600">{{ err('category_id') }}</p>
           </div>
 
           <div class="flex flex-wrap gap-4">
             <div>
               <label class="label">Sub Kategori</label>
-              <select v-model="form.sub_category_id" class="input !w-64" required :disabled="!form.category_id">
-                <option value="" disabled>Pilih sub kategori</option>
-                <option v-for="s in subCategories" :key="s.id" :value="s.id">{{ s.nama }}</option>
-              </select>
+              <SearchSelect v-model="form.sub_category_id" :options="subCategories" :placeholder="subPlaceholder" class="!w-64" :disabled="subDisabled" />
               <p v-if="err('sub_category_id')" class="mt-1 text-xs text-red-600">{{ err('sub_category_id') }}</p>
             </div>
             <div>

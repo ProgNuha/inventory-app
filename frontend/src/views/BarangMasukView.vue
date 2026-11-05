@@ -4,6 +4,8 @@ import http from '../api/http'
 import { useAuthStore } from '../stores/auth'
 import { rupiah, formatDateTime, itemCode, downloadBlob } from '../utils/format'
 import Pagination from '../components/Pagination.vue'
+import LoadingOverlay from '../components/LoadingOverlay.vue'
+import SearchSelect from '../components/SearchSelect.vue'
 import IconButton from '../components/IconButton.vue'
 import BarangMasukFormModal from '../components/BarangMasukFormModal.vue'
 
@@ -18,6 +20,8 @@ const sort = reactive({ by: 'tanggal', dir: 'desc' })
 
 const categories = ref([])
 const subCategories = ref([])
+const loadingSub = ref(false)
+let subRequest = 0
 const years = ref([])
 
 const formOpen = ref(false)
@@ -50,10 +54,16 @@ async function load(page = 1) {
 }
 
 async function loadSubCategories(categoryId) {
-  const { data } = await http.get('/options/sub-categories', {
-    params: { category_id: categoryId || undefined },
-  })
-  subCategories.value = data
+  const request = ++subRequest // abaikan respons lama bila kategori keburu diganti
+  loadingSub.value = true
+  try {
+    const { data } = await http.get('/options/sub-categories', {
+      params: { category_id: categoryId || undefined },
+    })
+    if (request === subRequest) subCategories.value = data
+  } finally {
+    if (request === subRequest) loadingSub.value = false
+  }
 }
 
 function loadYears() {
@@ -79,6 +89,7 @@ watch(() => filters.category_id, (id) => {
 
 let timer
 watch(filters, () => {
+  loading.value = true
   clearTimeout(timer)
   timer = setTimeout(() => load(1), 350)
 }, { deep: true })
@@ -148,18 +159,9 @@ async function remove(row) {
       <button class="btn-primary" @click="openForm(null)">+ Tambah Data</button>
 
       <div class="flex flex-wrap items-center gap-2">
-        <select v-model="filters.category_id" class="input !w-44">
-          <option value="">Semua Kategori</option>
-          <option v-for="c in categories" :key="c.id" :value="c.id">{{ c.nama }}</option>
-        </select>
-        <select v-model="filters.sub_category_id" class="input !w-44">
-          <option value="">Semua Sub Kategori</option>
-          <option v-for="s in subCategories" :key="s.id" :value="s.id">{{ s.nama }}</option>
-        </select>
-        <select v-model="filters.year" class="input !w-32">
-          <option value="">Semua Tahun</option>
-          <option v-for="y in years" :key="y" :value="y">{{ y }}</option>
-        </select>
+        <SearchSelect v-model="filters.category_id" :options="categories" empty-label="Semua Kategori" class="!w-44" />
+        <SearchSelect v-model="filters.sub_category_id" :options="subCategories" empty-label="Semua Sub Kategori" :disabled="loadingSub || (!!filters.category_id && !subCategories.length)" class="!w-44" />
+        <SearchSelect v-model="filters.year" :options="years" empty-label="Semua Tahun" class="!w-32" />
 
         <div class="flex">
           <input v-model="filters.search" class="input !w-44 !rounded-r-none" placeholder="Cari data.." />
@@ -180,6 +182,8 @@ async function remove(row) {
     </div>
 
     <!-- tabel -->
+    <div class="relative">
+      <LoadingOverlay :show="loading && rows.length > 0" />
     <div class="overflow-x-auto transition-opacity" :class="{ 'pointer-events-none opacity-50': loading && rows.length }">
       <table class="w-full min-w-[1100px] border-collapse text-xs">
         <thead>
@@ -254,6 +258,7 @@ async function remove(row) {
           </tr>
         </tbody>
       </table>
+    </div>
     </div>
 
     <div class="border-t bg-slate-50 p-3">

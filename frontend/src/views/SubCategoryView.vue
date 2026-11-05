@@ -3,6 +3,7 @@ import { ref, reactive, watch, onMounted } from 'vue'
 import http from '../api/http'
 import { rupiah } from '../utils/format'
 import Pagination from '../components/Pagination.vue'
+import LoadingOverlay from '../components/LoadingOverlay.vue'
 import ModalDialog from '../components/ModalDialog.vue'
 import IconButton from '../components/IconButton.vue'
 import SearchSelect from '../components/SearchSelect.vue'
@@ -34,6 +35,7 @@ async function load(page = 1) {
 
 let timer
 watch(search, () => {
+  loading.value = true
   clearTimeout(timer)
   timer = setTimeout(() => load(1), 400)
 })
@@ -113,6 +115,8 @@ async function remove(row) {
       </div>
     </div>
 
+    <div class="relative">
+      <LoadingOverlay :show="loading && rows.length > 0" />
     <div class="overflow-x-auto transition-opacity" :class="{ 'pointer-events-none opacity-50': loading && rows.length }">
       <table class="data-table">
         <thead>
@@ -142,6 +146,7 @@ async function remove(row) {
           </tr>
         </tbody>
       </table>
+    </div>
     </div>
 
     <div class="border-t bg-slate-50 p-3">
