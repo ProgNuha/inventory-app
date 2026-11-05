@@ -48,7 +48,7 @@ class UserController extends Controller
     /**
      * Remove the specified resource from storage.
      */
-    public function destroy(UserRequest $request, User $user)
+    public function destroy(Request $request, User $user)
     {
         $this->service->delete($user, $request->user());
 

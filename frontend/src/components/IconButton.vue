@@ -3,6 +3,8 @@ defineProps({
   icon: { type: String, required: true },
   title: { type: String, default: '' },
   color: { type: String, default: 'text-slate-600 hover:bg-slate-100' },
+  loading: { type: Boolean, default: false },
+  disabled: { type: Boolean, default: false },
 })
 </script>
 
@@ -11,9 +13,15 @@ defineProps({
     type="button"
     :title="title"
     :aria-label="title"
-    :class="['inline-grid h-6 w-6 place-items-center rounded transition-colors', color]"
+    :disabled="loading || disabled"
+    :class="[
+      'inline-grid h-6 w-6 place-items-center rounded transition-colors disabled:hover:bg-transparent',
+      color,
+      loading ? 'cursor-wait' : disabled ? 'cursor-not-allowed opacity-40' : '',
+    ]"
   >
-    <svg viewBox="0 0 24 24" class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <span v-if="loading" class="h-4 w-4 animate-spin rounded-full border-2 border-slate-300 border-t-primary"></span>
+    <svg v-else viewBox="0 0 24 24" class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
       <template v-if="icon === 'edit'">
         <path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z" />
       </template>

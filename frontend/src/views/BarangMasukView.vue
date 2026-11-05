@@ -1,10 +1,13 @@
 <script setup>
-import { ref, reactive, watch, onMounted } from 'vue'
+import { ref, reactive, computed, watch, onMounted } from 'vue'
 import http from '../api/http'
+import { confirmDelete, showError } from '../utils/alert'
 import { useAuthStore } from '../stores/auth'
 import { rupiah, formatDateTime, itemCode, downloadBlob } from '../utils/format'
 import Pagination from '../components/Pagination.vue'
 import LoadingOverlay from '../components/LoadingOverlay.vue'
+import FlashBanner from '../components/FlashBanner.vue'
+import { useFlash } from '../composables/useFlash'
 import SearchSelect from '../components/SearchSelect.vue'
 import IconButton from '../components/IconButton.vue'
 import BarangMasukFormModal from '../components/BarangMasukFormModal.vue'
@@ -14,6 +17,11 @@ const auth = useAuthStore()
 const rows = ref([])
 const meta = reactive({ page: 1, lastPage: 1, from: 0 })
 const loading = ref(true)
+const flash = useFlash()
+const busyId = ref(null) // id baris yang sedang dihapus / dikunci
+const busy = computed(() => busyId.value !== null || printingId.value !== null) // selama ada proses, tombol aksi lain dikunci
+const exporting = ref(false)
+const printingId = ref(null)
 
 const filters = reactive({ category_id: '', sub_category_id: '', year: '', search: '' })
 const sort = reactive({ by: 'tanggal', dir: 'desc' })
@@ -106,48 +114,64 @@ function openForm(id = null) {
   formOpen.value = true
 }
 function onSaved() {
+  flash.show(editId.value ? 'Data barang masuk berhasil diperbarui' : 'Data barang masuk berhasil ditambahkan')
   formOpen.value = false
   load(meta.page)
   loadYears()
 }
 
 async function exportExcel() {
+  if (exporting.value) return
+  exporting.value = true
   try {
     const { data } = await http.get('/barang-masuk/export', { params: params(undefined), responseType: 'blob' })
     downloadBlob(data, 'barang-masuk.xlsx')
+    flash.show('File Excel berhasil diunduh')
   } catch (e) {
-    alert('Gagal export data')
+    showError('Data tidak dapat diekspor, silakan coba lagi.', 'Gagal export')
+  } finally {
+    exporting.value = false
   }
 }
 
 async function printSurat(row) {
+  if (busy.value) return
+  printingId.value = row.id
   const win = window.open('', '_blank')
   try {
     const { data } = await http.get(`/barang-masuk/${row.id}/print`, { responseType: 'blob' })
     win.location = URL.createObjectURL(new Blob([data], { type: 'application/pdf' }))
   } catch (e) {
     win?.close()
-    alert('Gagal mencetak surat')
+    showError('Surat masuk tidak dapat dicetak, silakan coba lagi.', 'Gagal mencetak')
+  } finally {
+    printingId.value = null
   }
 }
 
 async function toggleVerify(row) {
-  if (!auth.isAdmin) return
+  if (!auth.isAdmin || busy.value) return
   try {
     const { data } = await http.patch(`/barang-masuk/${row.id}/verify`)
     row.is_verified = data.is_verified
+    flash.show(data.is_verified ? 'Data berhasil diverifikasi' : 'Verifikasi dibatalkan')
   } catch (e) {
-    alert('Gagal mengubah status verifikasi')
+    showError('Status verifikasi tidak dapat diubah, silakan coba lagi.', 'Gagal verifikasi')
   }
 }
 
 async function remove(row) {
-  if (!confirm(`Hapus data barang masuk dari "${row.asal_barang}"?`)) return
+  if (busy.value) return
+  if (!(await confirmDelete(`Data barang masuk dari "${row.asal_barang}"`))) return
+  busyId.value = row.id
   try {
     await http.delete(`/barang-masuk/${row.id}`)
     await load(rows.value.length === 1 && meta.page > 1 ? meta.page - 1 : meta.page)
+    flash.show('Data barang masuk berhasil dihapus')
   } catch (e) {
-    alert(e.response?.data?.message || 'Gagal menghapus data')
+    showError(e.response?.data?.message || 'Gagal menghapus data', 'Gagal menghapus')
+  } finally {
+    busyId.value = null
   }
 }
 </script>
@@ -177,11 +201,16 @@ async function remove(row) {
           </button>
         </div>
 
-        <button class="btn-secondary" @click="exportExcel">Export Excel</button>
+        <button class="btn-secondary inline-flex items-center gap-2" :disabled="exporting" @click="exportExcel">
+          <span v-if="exporting" class="h-3.5 w-3.5 animate-spin rounded-full border-2 border-white/40 border-t-white"></span>
+          {{ exporting ? 'Mengekspor...' : 'Export Excel' }}
+        </button>
       </div>
     </div>
 
     <!-- tabel -->
+    <FlashBanner :message="flash.message.value" @close="flash.hide" />
+
     <div class="relative">
       <LoadingOverlay :show="loading && rows.length > 0" />
     <div class="overflow-x-auto transition-opacity" :class="{ 'pointer-events-none opacity-50': loading && rows.length }">
@@ -215,9 +244,9 @@ async function remove(row) {
               <template v-if="idx === 0">
                 <td :rowspan="row.items.length" :class="[cell, 'align-top']">{{ meta.from + ri }}</td>
                 <td :rowspan="row.items.length" :class="[cell, 'whitespace-nowrap !px-1 align-top']">
-                  <IconButton icon="edit" title="Edit" @click="openForm(row.id)" />
-                  <IconButton icon="print" title="Cetak surat masuk" @click="printSurat(row)" />
-                  <IconButton icon="trash" title="Hapus" color="text-red-500 hover:bg-red-50" @click="remove(row)" />
+                  <IconButton :disabled="busy" icon="edit" title="Edit" @click="openForm(row.id)" />
+                  <IconButton :disabled="busy" icon="print" title="Cetak surat masuk" :loading="printingId === row.id" @click="printSurat(row)" />
+                  <IconButton :disabled="busy" icon="trash" title="Hapus" color="text-red-500 hover:bg-red-50" :loading="busyId === row.id" @click="remove(row)" />
                 </td>
                 <td :rowspan="row.items.length" :class="[cell, 'whitespace-nowrap align-top']">{{ formatDateTime(row.tanggal) }}</td>
                 <td :rowspan="row.items.length" :class="[cell, 'align-top']">{{ row.asal_barang }}</td>
@@ -235,7 +264,7 @@ async function remove(row) {
               <td v-if="idx === 0" :rowspan="row.items.length" :class="[cell, 'text-center align-top']">
                 <button
                   type="button"
-                  :disabled="!auth.isAdmin"
+                  :disabled="!auth.isAdmin || busy"
                   :title="auth.isAdmin ? 'Klik untuk mengubah status verifikasi' : row.is_verified ? 'Terverifikasi' : 'Belum diverifikasi'"
                   :class="[row.is_verified ? 'text-green-500' : 'text-slate-400', auth.isAdmin ? 'cursor-pointer' : 'cursor-default']"
                   @click="toggleVerify(row)"

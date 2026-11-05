@@ -1,9 +1,12 @@
 <script setup>
-import { ref, reactive, watch, onMounted } from 'vue'
+import { ref, reactive, computed, watch, onMounted } from 'vue'
 import http from '../api/http'
+import { confirmDelete, showError } from '../utils/alert'
 import { rupiah } from '../utils/format'
 import Pagination from '../components/Pagination.vue'
 import LoadingOverlay from '../components/LoadingOverlay.vue'
+import FlashBanner from '../components/FlashBanner.vue'
+import { useFlash } from '../composables/useFlash'
 import ModalDialog from '../components/ModalDialog.vue'
 import IconButton from '../components/IconButton.vue'
 import SearchSelect from '../components/SearchSelect.vue'
@@ -13,6 +16,9 @@ const rows = ref([])
 const meta = reactive({ page: 1, lastPage: 1, from: 0 })
 const search = ref('')
 const loading = ref(true)
+const flash = useFlash()
+const busyId = ref(null) // id baris yang sedang dihapus / dikunci
+const busy = computed(() => busyId.value !== null) // selama ada proses, tombol aksi lain dikunci
 const categories = ref([])
 
 const catName = (row) =>
@@ -72,6 +78,7 @@ async function save() {
     const wasEdit = !!editingId.value
     open.value = false
     await load(wasEdit ? meta.page : 1)
+    flash.show(wasEdit ? 'Sub kategori berhasil diperbarui' : 'Sub kategori berhasil ditambahkan')
   } catch (e) {
     if (e.response?.status === 422) {
       errors.value = e.response.data.errors || {}
@@ -85,12 +92,17 @@ async function save() {
 }
 
 async function remove(row) {
-  if (!confirm(`Hapus sub kategori "${row.nama}"?`)) return
+  if (busy.value) return
+  if (!(await confirmDelete(`Sub kategori "${row.nama}"`))) return
+  busyId.value = row.id
   try {
     await http.delete(`/sub-categories/${row.id}`)
     await load(rows.value.length === 1 && meta.page > 1 ? meta.page - 1 : meta.page)
+    flash.show('Sub kategori berhasil dihapus')
   } catch (e) {
-    alert(e.response?.data?.message || 'Gagal menghapus data')
+    showError(e.response?.data?.message || 'Gagal menghapus data', 'Gagal menghapus')
+  } finally {
+    busyId.value = null
   }
 }
 </script>
@@ -115,6 +127,8 @@ async function remove(row) {
       </div>
     </div>
 
+    <FlashBanner :message="flash.message.value" @close="flash.hide" />
+
     <div class="relative">
       <LoadingOverlay :show="loading && rows.length > 0" />
     <div class="overflow-x-auto transition-opacity" :class="{ 'pointer-events-none opacity-50': loading && rows.length }">
@@ -137,8 +151,8 @@ async function remove(row) {
           <tr v-for="(row, i) in rows" :key="row.id">
             <td>{{ meta.from + i }}</td>
             <td class="whitespace-nowrap !px-1">
-              <IconButton icon="edit" title="Edit" color="text-primary hover:bg-slate-100" @click="openForm(row)" />
-              <IconButton icon="trash" title="Hapus" color="text-red-500 hover:bg-red-50" @click="remove(row)" />
+              <IconButton :disabled="busy" icon="edit" title="Edit" color="text-primary hover:bg-slate-100" @click="openForm(row)" />
+              <IconButton :disabled="busy" icon="trash" title="Hapus" color="text-red-500 hover:bg-red-50" :loading="busyId === row.id" @click="remove(row)" />
             </td>
             <td>{{ catName(row) }}</td>
             <td>{{ row.nama }}</td>
