@@ -11,7 +11,7 @@ defineProps({
     type="button"
     :title="title"
     :aria-label="title"
-    :class="['inline-grid h-8 w-8 place-items-center rounded transition-colors', color]"
+    :class="['inline-grid h-6 w-6 place-items-center rounded transition-colors', color]"
   >
     <svg viewBox="0 0 24 24" class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
       <template v-if="icon === 'edit'">

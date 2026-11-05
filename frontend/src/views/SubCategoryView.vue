@@ -5,6 +5,7 @@ import { rupiah } from '../utils/format'
 import Pagination from '../components/Pagination.vue'
 import ModalDialog from '../components/ModalDialog.vue'
 import RupiahInput from '../components/RupiahInput.vue'
+import IconButton from '../components/IconButton.vue'
 
 const rows = ref([])
 const meta = reactive({ page: 1, lastPage: 1, from: 0 })

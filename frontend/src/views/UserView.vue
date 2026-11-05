@@ -4,6 +4,7 @@ import http from '../api/http'
 import { useAuthStore } from '../stores/auth'
 import Pagination from '../components/Pagination.vue'
 import ModalDialog from '../components/ModalDialog.vue'
+import IconButton from '../components/IconButton.vue'
 
 const auth = useAuthStore()
 
@@ -133,7 +134,7 @@ async function remove(row) {
           <tr v-for="(row, i) in rows" :key="row.id" class="border-t">
             <td class="px-3 py-2">{{ meta.from + i }}</td>
             <td class="px-3 py-2 space-x-3">
-              <IconButton icon="edit" title="Edit" color="text-primary hover:bg-slate-100" @click="openEdit(row)" />
+              <IconButton icon="edit" title="Edit" color="text-primary hover:bg-slate-100" @click="openForm(row)" />
               <template v-if="row.id !== auth.user?.id">
                 <IconButton :icon="row.is_locked ? 'unlock' : 'lock'" :title="row.is_locked ? 'Buka kunci' : 'Kunci'" @click="toggleLock(row)" />
                 <IconButton icon="trash" title="Hapus" color="text-red-600 hover:bg-red-50" @click="remove(row)" />
