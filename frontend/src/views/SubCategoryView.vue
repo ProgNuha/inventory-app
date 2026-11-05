@@ -118,8 +118,8 @@ async function remove(row) {
           <tr v-for="(row, i) in rows" :key="row.id" class="border-t">
             <td class="px-3 py-2">{{ meta.from + i }}</td>
             <td class="px-3 py-2 space-x-3">
-              <button class="text-primary hover:underline" @click="openForm(row)">Edit</button>
-              <button class="text-red-600 hover:underline" @click="remove(row)">Hapus</button>
+              <IconButton icon="edit" title="Edit" color="text-primary hover:bg-slate-100" @click="openEdit(row)" />
+              <IconButton icon="trash" title="Hapus" color="text-red-600 hover:bg-red-50" @click="remove(row)" />
             </td>
             <td class="px-3 py-2">{{ row.category?.nama }}</td>
             <td class="px-3 py-2">{{ row.nama }}</td>

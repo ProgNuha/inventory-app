@@ -133,12 +133,10 @@ async function remove(row) {
           <tr v-for="(row, i) in rows" :key="row.id" class="border-t">
             <td class="px-3 py-2">{{ meta.from + i }}</td>
             <td class="px-3 py-2 space-x-3">
-              <button class="text-primary hover:underline" @click="openForm(row)">Edit</button>
+              <IconButton icon="edit" title="Edit" color="text-primary hover:bg-slate-100" @click="openEdit(row)" />
               <template v-if="row.id !== auth.user?.id">
-                <button class="text-amber-600 hover:underline" @click="toggleLock(row)">
-                  {{ row.is_locked ? 'Buka Kunci' : 'Kunci' }}
-                </button>
-                <button class="text-red-600 hover:underline" @click="remove(row)">Hapus</button>
+                <IconButton :icon="row.is_locked ? 'unlock' : 'lock'" :title="row.is_locked ? 'Buka kunci' : 'Kunci'" @click="toggleLock(row)" />
+                <IconButton icon="trash" title="Hapus" color="text-red-600 hover:bg-red-50" @click="remove(row)" />
               </template>
             </td>
             <td class="px-3 py-2">
