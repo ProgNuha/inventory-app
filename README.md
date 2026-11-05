@@ -8,7 +8,6 @@ Tes teknis Fullstack Programmer JMC Indonesia: aplikasi untuk mengelola data **B
 
 | | |
 |---|---|
-| **Link Deployment** | https://inventory-app-ac92.onrender.com/ |
 | **Link Video Demo** | https://bit.ly/4fdjE81 |
 
 ## Tech Stack
