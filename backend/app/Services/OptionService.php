@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Models\BarangMasuk;
 use App\Models\Category;
 use App\Models\SubCategory;
 use App\Models\User;
@@ -16,7 +17,7 @@ class OptionService
 
     public function subCategories(?int $categoryId): Collection
     {
-        return SubCategory::when($categoryId, fn ($q, $id) => $q->where('category_id', $id))
+        return SubCategory::when($categoryId, fn($q, $id) => $q->where('category_id', $id))
             ->orderBy('nama')
             ->get(['id', 'category_id', 'nama', 'batas_harga']);
     }
@@ -27,5 +28,14 @@ class OptionService
             ->where('is_locked', false)
             ->orderBy('name')
             ->get(['id', 'name', 'username']);
+    }
+
+    public function years(): Collection
+    {
+        return BarangMasuk::query()
+            ->selectRaw('EXTRACT(YEAR FROM tanggal)::int AS year')
+            ->distinct()
+            ->orderByDesc('year')
+            ->pluck('year');
     }
 }

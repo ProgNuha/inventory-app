@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\AuthController;
 use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\BarangMasukController;
 use App\Http\Controllers\SubCategoryController;
 use App\Http\Controllers\CategoryController;
 use App\Http\Controllers\OptionController;
@@ -12,6 +13,8 @@ Route::post('/login', [AuthController::class, 'login']);
 Route::middleware('auth:sanctum')->group(function () {
     Route::get('/me', [AuthController::class, 'me']);
     Route::post('/logout', [AuthController::class, 'logout']);
+    Route::get('/options/years', [OptionController::class, 'years']);
+    Route::apiResource('barang-masuk', BarangMasukController::class);
     Route::get('/options/categories', [OptionController::class, 'categories']);
     Route::get('/options/sub-categories', [OptionController::class, 'subCategories']);
 });

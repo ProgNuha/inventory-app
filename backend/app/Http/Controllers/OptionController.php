@@ -7,7 +7,9 @@ use Illuminate\Http\Request;
 
 class OptionController extends Controller
 {
-    public function __construct(private OptionService $service) {}
+    public function __construct(private OptionService $service)
+    {
+    }
 
     public function categories()
     {
@@ -22,5 +24,10 @@ class OptionController extends Controller
     public function operators()
     {
         return $this->service->operators();
+    }
+
+    public function years()
+    {
+        return $this->service->years();
     }
 }
