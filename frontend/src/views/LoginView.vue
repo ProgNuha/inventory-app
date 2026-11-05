@@ -11,6 +11,18 @@ const password = ref('')
 const error = ref('')
 const loading = ref(false)
 
+const demoAccounts = [
+  { role: 'Admin', username: 'demoadmin', password: 'DemoAdmin123' },
+  { role: 'Operator', username: 'demooperator', password: 'DemoOperator123' },
+  { role: 'Operator', username: 'sitirahayu', password: 'Operator12345', locked: true },
+]
+
+function useDemo(acc) {
+  username.value = acc.username
+  password.value = acc.password
+  error.value = ''
+}
+
 async function submit() {
   error.value = ''
   loading.value = true
@@ -45,6 +57,22 @@ async function submit() {
         <button type="submit" class="btn-primary w-full !py-3 text-xs tracking-wide" :disabled="loading">
           {{ loading ? 'MEMPROSES...' : 'MASUK' }}
         </button>
+
+        <div class="mt-6 rounded border border-slate-200 bg-slate-50 p-3">
+          <p class="mb-2 text-[11px] font-bold uppercase tracking-wide text-slate-500">Akun Demo</p>
+          <button
+            v-for="acc in demoAccounts"
+            :key="acc.username"
+            type="button"
+            class="flex w-full items-center justify-between gap-2 rounded px-2 py-1.5 text-left text-xs text-slate-700 hover:bg-white"
+            title="Klik untuk mengisi otomatis"
+            @click="useDemo(acc)"
+          >
+            <span><b class="font-semibold">{{ acc.role }}:</b> {{ acc.username }} / {{ acc.password }}</span>
+            <span v-if="acc.locked" class="shrink-0 rounded bg-red-100 px-1.5 py-0.5 text-[10px] text-red-700">Terkunci</span>
+            <span v-else class="shrink-0 text-[11px] text-primary">Isi otomatis</span>
+          </button>
+        </div>
       </form>
     </div>
 

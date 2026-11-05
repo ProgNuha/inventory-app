@@ -13,15 +13,16 @@ class UserSeeder extends Seeder
     public function run(): void
     {
         $users = [
-            ['administrator', 'Administrator', 'admin@example.com', 'admin', 'Admin12345'],
-            ['operator01', 'Operator Gudang', 'operator01@example.com', 'operator', 'Operator12345'],
-            ['budisantoso', 'Budi Santoso', 'budi.santoso@example.com', 'operator', 'Operator12345'],
-            ['jokosuyanto', 'Joko Suyanto', 'joko.suyanto@example.com', 'operator', 'Operator12345'],
-            ['sitirahayu', 'Siti Rahayu', 'siti.rahayu@example.com', 'operator', 'Operator12345'],
+            ['demoadmin', 'Demo Admin', 'demo.admin@example.com', 'admin', 'DemoAdmin123', false],
+            ['demooperator', 'Demo Operator', 'demo.operator@example.com', 'operator', 'DemoOperator123', false],
+            ['administrator', 'Administrator', 'admin@example.com', 'admin', 'Admin12345', false],
+            ['operator01', 'Operator Gudang', 'operator01@example.com', 'operator', 'Operator12345', false],
+            ['budisantoso', 'Budi Santoso', 'budi.santoso@example.com', 'operator', 'Operator12345', false],
+            ['jokosuyanto', 'Joko Suyanto', 'joko.suyanto@example.com', 'operator', 'Operator12345', false],
+            ['sitirahayu', 'Siti Rahayu', 'siti.rahayu@example.com', 'operator', 'Operator12345', true], // dikunci untuk demo
         ];
 
-        foreach ($users as [$username, $name, $email, $role, $password]) {
-            // cari lewat email ATAU username supaya tidak bentrok dengan data lama
+        foreach ($users as [$username, $name, $email, $role, $password, $locked]) {
             $user = User::where('email', $email)->orWhere('username', $username)->first() ?? new User();
 
             $user->fill([
@@ -29,11 +30,11 @@ class UserSeeder extends Seeder
                 'name' => $name,
                 'email' => $email,
                 'role' => $role,
-                'is_locked' => false,
             ]);
 
             if (!$user->exists) {
-                $user->password = $password; // password hanya diisi untuk user baru
+                $user->password = $password;
+                $user->is_locked = $locked;
             }
 
             $user->save();
