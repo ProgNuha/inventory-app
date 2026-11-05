@@ -143,4 +143,41 @@ class BarangMasukService
             Storage::disk('public')->delete($path);
         }
     }
+
+    public function toggleVerify(BarangMasuk $barangMasuk): BarangMasuk
+    {
+        $barangMasuk->update(['is_verified' => !$barangMasuk->is_verified]);
+
+        return $this->show($barangMasuk);
+    }
+
+    public function exportRows(array $filters, User $actor): array
+    {
+        $rows = [];
+        $no = 0;
+
+        foreach ($this->filteredQuery($filters, $actor)->get() as $barangMasuk) {
+            $no++;
+
+            foreach ($barangMasuk->items as $i => $item) {
+                $first = $i === 0;
+
+                $rows[] = [
+                    $first ? $no : '',
+                    $first ? $barangMasuk->tanggal->format('d/m/Y H:i:s') : '',
+                    $first ? $barangMasuk->asal_barang : '',
+                    $first ? $barangMasuk->user->name : '',
+                    $first ? $barangMasuk->subCategory->nama : '',
+                    $barangMasuk->subCategory->category->kode . str_pad($item->id, 4, '0', STR_PAD_LEFT),
+                    $item->nama_barang,
+                    $item->harga,
+                    $item->jumlah . ' ' . $item->satuan,
+                    $item->total,
+                    $first ? ($barangMasuk->is_verified ? 'Terverifikasi' : 'Belum') : '',
+                ];
+            }
+        }
+
+        return $rows;
+    }
 }

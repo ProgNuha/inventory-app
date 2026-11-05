@@ -14,12 +14,15 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/me', [AuthController::class, 'me']);
     Route::post('/logout', [AuthController::class, 'logout']);
     Route::get('/options/years', [OptionController::class, 'years']);
+    Route::get('barang-masuk/export', [BarangMasukController::class, 'export']);
+    Route::get('barang-masuk/{barang_masuk}/print', [BarangMasukController::class, 'print']);
     Route::apiResource('barang-masuk', BarangMasukController::class);
     Route::get('/options/categories', [OptionController::class, 'categories']);
     Route::get('/options/sub-categories', [OptionController::class, 'subCategories']);
 });
 
 Route::middleware(['auth:sanctum', 'role:admin'])->group(function () {
+    Route::patch('barang-masuk/{barang_masuk}/verify', [BarangMasukController::class, 'verify']);
     Route::apiResource('users', UserController::class)->except('show');
     Route::patch('users/{user}/lock', [UserController::class, 'toggleLock']);
     Route::get('/options/operators', [OptionController::class, 'operators']);
