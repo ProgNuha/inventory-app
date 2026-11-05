@@ -4,7 +4,9 @@ services:
     environment:
       POSTGRES_DB: inventory
       POSTGRES_USER: inventory
-      POSTGRES_PASSWORD: secret
+      POSTGRES_PASSWORD: admin
+    ports:
+      - "5433:5432"
     volumes:
       - db_data:/var/lib/postgresql/data
     healthcheck:
