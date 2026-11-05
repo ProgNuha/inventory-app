@@ -11,7 +11,7 @@ const auth = useAuthStore()
 
 const rows = ref([])
 const meta = reactive({ page: 1, lastPage: 1, from: 0 })
-const loading = ref(false)
+const loading = ref(true)
 
 const filters = reactive({ category_id: '', sub_category_id: '', year: '', search: '' })
 const sort = reactive({ by: 'tanggal', dir: 'desc' })
@@ -180,7 +180,7 @@ async function remove(row) {
     </div>
 
     <!-- tabel -->
-    <div class="overflow-x-auto">
+    <div class="overflow-x-auto transition-opacity" :class="{ 'pointer-events-none opacity-50': loading && rows.length }">
       <table class="w-full min-w-[1100px] border-collapse text-xs">
         <thead>
           <tr class="text-[11px] font-bold uppercase text-slate-700">

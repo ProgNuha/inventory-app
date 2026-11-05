@@ -4,14 +4,18 @@ import http from '../api/http'
 import { rupiah } from '../utils/format'
 import Pagination from '../components/Pagination.vue'
 import ModalDialog from '../components/ModalDialog.vue'
-import RupiahInput from '../components/RupiahInput.vue'
 import IconButton from '../components/IconButton.vue'
+import SearchSelect from '../components/SearchSelect.vue'
+import RupiahInput from '../components/RupiahInput.vue'
 
 const rows = ref([])
 const meta = reactive({ page: 1, lastPage: 1, from: 0 })
 const search = ref('')
-const loading = ref(false)
+const loading = ref(true)
 const categories = ref([])
+
+const catName = (row) =>
+  row.category?.nama ?? categories.value.find((c) => c.id === row.category_id)?.nama ?? '-'
 
 async function load(page = 1) {
   loading.value = true
@@ -28,11 +32,6 @@ async function load(page = 1) {
   }
 }
 
-async function loadCategories() {
-  const { data } = await http.get('/options/categories')
-  categories.value = data
-}
-
 let timer
 watch(search, () => {
   clearTimeout(timer)
@@ -40,13 +39,13 @@ watch(search, () => {
 })
 onMounted(() => {
   load()
-  loadCategories()
+  http.get('/options/categories').then(({ data }) => (categories.value = data))
 })
 
 // form modal
 const open = ref(false)
 const editingId = ref(null)
-const form = reactive({ category_id: '', nama: '', batas_harga: '' })
+const form = reactive({ category_id: '', nama: '', batas_harga: 0 })
 const errors = ref({})
 const formError = ref('')
 const saving = ref(false)
@@ -55,7 +54,7 @@ function openForm(row = null) {
   editingId.value = row?.id ?? null
   form.category_id = row?.category_id ?? ''
   form.nama = row?.nama ?? ''
-  form.batas_harga = row?.batas_harga ?? ''
+  form.batas_harga = Number(row?.batas_harga ?? 0)
   errors.value = {}
   formError.value = ''
   open.value = true
@@ -98,39 +97,54 @@ async function remove(row) {
   <div class="rounded bg-white shadow-sm">
     <div class="flex flex-wrap items-center justify-between gap-2 p-3">
       <button class="btn-primary" @click="openForm()">+ Tambah Data</button>
-      <input v-model="search" class="input !w-64" placeholder="Cari kategori / sub kategori..." />
+
+      <div class="flex">
+        <input v-model="search" class="input !w-56 !rounded-r-none" placeholder="Cari data.." />
+        <button
+          type="button"
+          title="Cari"
+          class="grid w-10 place-items-center rounded-r border border-l-0 border-slate-300 text-slate-500 hover:bg-slate-50"
+          @click="load(1)"
+        >
+          <svg viewBox="0 0 24 24" class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+            <circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" />
+          </svg>
+        </button>
+      </div>
     </div>
 
-    <div class="overflow-x-auto">
-      <table class="w-full text-sm">
-        <thead class="bg-slate-50 text-[11px] uppercase text-slate-500">
+    <div class="overflow-x-auto transition-opacity" :class="{ 'pointer-events-none opacity-50': loading && rows.length }">
+      <table class="data-table">
+        <thead>
           <tr>
-            <th class="px-3 py-2 text-left w-12">No</th>
-            <th class="px-3 py-2 text-left w-28">Action</th>
-            <th class="px-3 py-2 text-left">Kategori Barang</th>
-            <th class="px-3 py-2 text-left">Sub Kategori Barang</th>
-            <th class="px-3 py-2 text-right">Batas Harga (Rp)</th>
+            <th class="w-12">No</th>
+            <th class="w-28">Action</th>
+            <th>Kategori</th>
+            <th>Nama Sub Kategori</th>
+            <th class="text-right">Batas Harga (Rp.)</th>
           </tr>
         </thead>
         <tbody>
-          <tr v-if="!loading && !rows.length">
-            <td colspan="5" class="px-3 py-8 text-center text-slate-400">Tidak ada data</td>
-          </tr>
-          <tr v-for="(row, i) in rows" :key="row.id" class="border-t">
-            <td class="px-3 py-2">{{ meta.from + i }}</td>
-            <td class="px-3 py-2 space-x-3">
-              <IconButton icon="edit" title="Edit" color="text-primary hover:bg-slate-100" @click="openEdit(row)" />
-              <IconButton icon="trash" title="Hapus" color="text-red-600 hover:bg-red-50" @click="remove(row)" />
+          <tr v-if="!rows.length">
+            <td colspan="5" class="py-8 text-center text-slate-500">
+              {{ loading ? 'Memuat data...' : 'Tidak ada data' }}
             </td>
-            <td class="px-3 py-2">{{ row.category?.nama }}</td>
-            <td class="px-3 py-2">{{ row.nama }}</td>
-            <td class="px-3 py-2 text-right">{{ rupiah(row.batas_harga) }}</td>
+          </tr>
+          <tr v-for="(row, i) in rows" :key="row.id">
+            <td>{{ meta.from + i }}</td>
+            <td class="whitespace-nowrap !px-1">
+              <IconButton icon="edit" title="Edit" color="text-primary hover:bg-slate-100" @click="openForm(row)" />
+              <IconButton icon="trash" title="Hapus" color="text-red-500 hover:bg-red-50" @click="remove(row)" />
+            </td>
+            <td>{{ catName(row) }}</td>
+            <td>{{ row.nama }}</td>
+            <td class="text-right">{{ rupiah(row.batas_harga) }}</td>
           </tr>
         </tbody>
       </table>
     </div>
 
-    <div class="p-3">
+    <div class="border-t bg-slate-50 p-3">
       <Pagination :page="meta.page" :last-page="meta.lastPage" @change="load" />
     </div>
   </div>
@@ -141,10 +155,7 @@ async function remove(row) {
 
       <div class="mb-3">
         <label class="label">Kategori</label>
-        <select v-model="form.category_id" class="input">
-          <option value="" disabled>Pilih Kategori</option>
-          <option v-for="c in categories" :key="c.id" :value="c.id">{{ c.nama }}</option>
-        </select>
+        <SearchSelect v-model="form.category_id" :options="categories" placeholder="Pilih kategori" required />
         <p v-if="errors.category_id" class="err">{{ errors.category_id[0] }}</p>
       </div>
 
@@ -156,7 +167,10 @@ async function remove(row) {
 
       <div>
         <label class="label">Batas Harga</label>
-        <RupiahInput v-model="form.batas_harga" />
+        <div class="relative">
+          <span class="pointer-events-none absolute left-2 top-1/2 -translate-y-1/2 text-xs text-slate-400">Rp.</span>
+          <RupiahInput v-model="form.batas_harga" class="input !pl-9 text-right" />
+        </div>
         <p v-if="errors.batas_harga" class="err">{{ errors.batas_harga[0] }}</p>
       </div>
     </form>

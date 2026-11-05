@@ -27,4 +27,15 @@ body {
   .btn-secondary {
     @apply rounded bg-slate-600 px-3 py-2 text-sm font-medium text-white hover:bg-slate-700 disabled:opacity-60;
   }
+
+  .data-table {
+    @apply w-full border-collapse text-xs;
+  }
+  .data-table th,
+  .data-table td {
+    @apply border border-slate-200 px-3 py-2;
+  }
+  .data-table th {
+    @apply text-left text-[11px] font-bold uppercase text-slate-700;
+  }
 }

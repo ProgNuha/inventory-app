@@ -12,7 +12,7 @@ const rows = ref([])
 const meta = reactive({ page: 1, lastPage: 1, from: 0 })
 const search = ref('')
 const role = ref('')
-const loading = ref(false)
+const loading = ref(true)
 
 async function load(page = 1) {
   loading.value = true
@@ -115,44 +115,46 @@ async function remove(row) {
       </div>
     </div>
 
-    <div class="overflow-x-auto">
-      <table class="w-full text-sm">
-        <thead class="bg-slate-50 text-[11px] uppercase text-slate-500">
+    <div class="overflow-x-auto transition-opacity" :class="{ 'pointer-events-none opacity-50': loading && rows.length }">
+      <table class="data-table">
+        <thead>
           <tr>
-            <th class="px-3 py-2 text-left w-12">No</th>
-            <th class="px-3 py-2 text-left w-44">Action</th>
-            <th class="px-3 py-2 text-left">Username</th>
-            <th class="px-3 py-2 text-left">Nama</th>
-            <th class="px-3 py-2 text-left">Email</th>
-            <th class="px-3 py-2 text-left">Role</th>
+            <th class="w-12">No</th>
+            <th class="w-32">Action</th>
+            <th>Username</th>
+            <th>Nama</th>
+            <th>Email</th>
+            <th>Role</th>
           </tr>
         </thead>
         <tbody>
-          <tr v-if="!loading && !rows.length">
-            <td colspan="6" class="px-3 py-8 text-center text-slate-400">Tidak ada data</td>
+          <tr v-if="!rows.length">
+            <td colspan="6" class="py-8 text-center text-slate-500">
+              {{ loading ? 'Memuat data...' : 'Tidak ada data' }}
+            </td>
           </tr>
-          <tr v-for="(row, i) in rows" :key="row.id" class="border-t">
-            <td class="px-3 py-2">{{ meta.from + i }}</td>
-            <td class="px-3 py-2 space-x-3">
+          <tr v-for="(row, i) in rows" :key="row.id">
+            <td>{{ meta.from + i }}</td>
+            <td class="whitespace-nowrap !px-1">
               <IconButton icon="edit" title="Edit" color="text-primary hover:bg-slate-100" @click="openForm(row)" />
               <template v-if="row.id !== auth.user?.id">
                 <IconButton :icon="row.is_locked ? 'unlock' : 'lock'" :title="row.is_locked ? 'Buka kunci' : 'Kunci'" @click="toggleLock(row)" />
-                <IconButton icon="trash" title="Hapus" color="text-red-600 hover:bg-red-50" @click="remove(row)" />
+                <IconButton icon="trash" title="Hapus" color="text-red-500 hover:bg-red-50" @click="remove(row)" />
               </template>
             </td>
-            <td class="px-3 py-2">
+            <td>
               {{ row.username }}
               <span v-if="row.is_locked" class="ml-1 rounded bg-red-100 px-1.5 py-0.5 text-[10px] text-red-700">Terkunci</span>
             </td>
-            <td class="px-3 py-2">{{ row.name }}</td>
-            <td class="px-3 py-2">{{ row.email }}</td>
-            <td class="px-3 py-2 capitalize">{{ row.role }}</td>
+            <td>{{ row.name }}</td>
+            <td>{{ row.email }}</td>
+            <td class="capitalize">{{ row.role }}</td>
           </tr>
         </tbody>
       </table>
     </div>
 
-    <div class="p-3">
+    <div class="border-t bg-slate-50 p-3">
       <Pagination :page="meta.page" :last-page="meta.lastPage" @change="load" />
     </div>
   </div>

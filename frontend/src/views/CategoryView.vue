@@ -8,7 +8,7 @@ import IconButton from '../components/IconButton.vue'
 const rows = ref([])
 const meta = reactive({ page: 1, lastPage: 1, from: 0 })
 const search = ref('')
-const loading = ref(false)
+const loading = ref(true)
 
 async function load(page = 1) {
   loading.value = true
@@ -89,34 +89,36 @@ async function remove(row) {
       <input v-model="search" class="input !w-56" placeholder="Cari kode / nama..." />
     </div>
 
-    <div class="overflow-x-auto">
-      <table class="w-full text-sm">
-        <thead class="bg-slate-50 text-[11px] uppercase text-slate-500">
+    <div class="overflow-x-auto transition-opacity" :class="{ 'pointer-events-none opacity-50': loading && rows.length }">
+      <table class="data-table">
+        <thead>
           <tr>
-            <th class="px-3 py-2 text-left w-12">No</th>
-            <th class="px-3 py-2 text-left w-28">Action</th>
-            <th class="px-3 py-2 text-left">Kode</th>
-            <th class="px-3 py-2 text-left">Nama Kategori</th>
+            <th class="w-12">No</th>
+            <th class="w-28">Action</th>
+            <th>Kode</th>
+            <th>Nama Kategori</th>
           </tr>
         </thead>
         <tbody>
-          <tr v-if="!loading && !rows.length">
-            <td colspan="4" class="px-3 py-8 text-center text-slate-400">Tidak ada data</td>
-          </tr>
-          <tr v-for="(row, i) in rows" :key="row.id" class="border-t">
-            <td class="px-3 py-2">{{ meta.from + i }}</td>
-            <td class="px-3 py-2 space-x-3">
-              <IconButton icon="edit" title="Edit" color="text-primary hover:bg-slate-100" @click="openForm(row)" />
-              <IconButton icon="trash" title="Hapus" color="text-red-600 hover:bg-red-50" @click="remove(row)" />
+          <tr v-if="!rows.length">
+            <td colspan="4" class="py-8 text-center text-slate-500">
+              {{ loading ? 'Memuat data...' : 'Tidak ada data' }}
             </td>
-            <td class="px-3 py-2">{{ row.kode }}</td>
-            <td class="px-3 py-2">{{ row.nama }}</td>
+          </tr>
+          <tr v-for="(row, i) in rows" :key="row.id">
+            <td>{{ meta.from + i }}</td>
+            <td class="whitespace-nowrap !px-1">
+              <IconButton icon="edit" title="Edit" color="text-primary hover:bg-slate-100" @click="openForm(row)" />
+              <IconButton icon="trash" title="Hapus" color="text-red-500 hover:bg-red-50" @click="remove(row)" />
+            </td>
+            <td>{{ row.kode }}</td>
+            <td>{{ row.nama }}</td>
           </tr>
         </tbody>
       </table>
     </div>
 
-    <div class="p-3">
+    <div class="border-t bg-slate-50 p-3">
       <Pagination :page="meta.page" :last-page="meta.lastPage" @change="load" />
     </div>
   </div>
